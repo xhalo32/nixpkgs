@@ -16,6 +16,7 @@ buildLakePackage {
   };
 
   leanPackageName = "Qq";
+  nativeTargets = [ "Qq" ];
 
   meta = {
     description = "Lean 4 compile-time quote and antiquote macros for metaprogramming";

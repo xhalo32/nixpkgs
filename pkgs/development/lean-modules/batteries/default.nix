@@ -16,6 +16,7 @@ buildLakePackage {
   };
 
   leanPackageName = "batteries";
+  nativeTargets = [ "Batteries" ];
 
   meta = {
     description = "The batteries-included extended library for Lean 4";

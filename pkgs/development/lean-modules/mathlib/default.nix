@@ -24,6 +24,7 @@ buildLakePackage {
   };
 
   leanPackageName = "mathlib";
+  nativeTargets = [ "Mathlib" ];
   leanDeps = [
     batteries
     aesop

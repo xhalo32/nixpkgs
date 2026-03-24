@@ -17,6 +17,7 @@ buildLakePackage {
   };
 
   leanPackageName = "LeanSearchClient";
+  nativeTargets = [ "LeanSearchClient" ];
 
   # Upstream lean-toolchain lags behind; remove it so the
   # buildLakePackage toolchain check does not reject this package.

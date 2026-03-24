@@ -16,6 +16,7 @@ buildLakePackage {
   };
 
   leanPackageName = "plausible";
+  nativeTargets = [ "Plausible" ];
 
   meta = {
     description = "Property-based testing framework for Lean 4";

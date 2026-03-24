@@ -16,6 +16,7 @@ buildLakePackage {
   };
 
   leanPackageName = "Cli";
+  nativeTargets = [ "Cli" ];
 
   meta = {
     description = "Command-line argument parser for Lean 4";

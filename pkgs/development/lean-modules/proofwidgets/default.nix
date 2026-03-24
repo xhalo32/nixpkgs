@@ -23,6 +23,7 @@ buildLakePackage {
   inherit src;
 
   leanPackageName = "proofwidgets";
+  nativeTargets = [ "ProofWidgets" ];
 
   # ProofWidgets has no Lean dependencies (lake-manifest.json packages = []).
   lakeHash = null;

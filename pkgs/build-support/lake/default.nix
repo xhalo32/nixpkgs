@@ -13,8 +13,14 @@
 #   $out/lakefile.{lean,toml}     Lake package configuration
 #   $out/lean-toolchain           Lean version pin
 #   $out/.lake/build/lib/lean/    Compiled .olean/.ilean files
-#   $out/.lake/build/ir/          Compiled C/object files
+#   $out/.lake/build/ir/          Compiled native object files
 #   $out/nix-support/setup-hook   LEAN_PATH propagation hook
+#
+# When splitNativeOutput is true (default for libraries), native object
+# files are installed to a separate `static` output, following the same
+# pattern as zlib's splitStaticOutput.  This keeps the default closure
+# lean while allowing dev shells to pull in the native objects
+# when needed.
 {
   lib,
   stdenv,
@@ -48,6 +54,8 @@ lib.extendMkDerivation {
     "isLibrary"
     "leanPackageName"
     "overrideLakeDepsAttrs"
+    "splitNativeOutput"
+    "nativeTargets"
   ];
   extendDrvArgs =
     finalAttrs:
@@ -80,6 +88,19 @@ lib.extendMkDerivation {
       # .olean/.ilean files) or an executable (install binaries only).
       isLibrary ? true,
 
+      # Whether to split native object files into a separate `static`
+      # output.  Defaults to true for libraries.  When true, downstream
+      # dev shells can reference the `static` output to get pre-built
+      # native objects for linking, without inflating the default
+      # closure.
+      splitNativeOutput ? (args.isLibrary or true),
+
+      # Lake library target names for which to build the :static facet
+      # (native objects for linking).  Only used when splitNativeOutput
+      # is true and buildTargets is empty (default targets).  Each
+      # entry should be a lean_lib name as declared in the lakefile.
+      nativeTargets ? [ ],
+
       # Override attributes of the lakeDeps derivation.
       overrideLakeDepsAttrs ? (finalAttrs: previousAttrs: { }),
 
@@ -95,6 +116,8 @@ lib.extendMkDerivation {
       buildTargets = args.buildTargets or [ ];
       isLibrary = args.isLibrary or true;
       leanPackageName = args.leanPackageName or finalAttrs.pname;
+      splitNativeOutput = args.splitNativeOutput or isLibrary;
+      nativeTargets = args.nativeTargets or [ ];
 
       computedLakeDeps =
         if lakeDeps' != null then
@@ -122,6 +145,8 @@ lib.extendMkDerivation {
       );
     in
     {
+      outputs = [ "out" ] ++ lib.optional splitNativeOutput "static";
+
       strictDeps = true;
 
       nativeBuildInputs = nativeBuildInputs ++ [
@@ -257,6 +282,21 @@ lib.extendMkDerivation {
 
           lake build --no-ansi $targets
 
+          ${lib.optionalString splitNativeOutput ''
+            # Build static library targets so that all modules get their
+            # native object files.  The default `lake build` only produces
+            # native objects for modules reachable from the default targets,
+            # but dev shells need them for every imported module when
+            # linking.  Lake dispatches to the appropriate backend
+            # (C or LLVM) internally, so this is backend-agnostic.
+            for target in ${
+              lib.concatStringsSep " " (if buildTargets != [ ] then buildTargets else nativeTargets)
+            }; do
+              echo "buildLakePackage: building $target:static for complete native object coverage"
+              lake build --no-ansi "$target:static" || true
+            done
+          ''}
+
           runHook postBuild
         '';
 
@@ -293,6 +333,25 @@ lib.extendMkDerivation {
                   fi
                 done
               fi
+
+              ${lib.optionalString splitNativeOutput ''
+                # Split native object files into the `static` output,
+                # following the same pattern as zlib's splitStaticOutput.
+                # This keeps the default `out` closure lean — only oleans,
+                # source, and metadata — while the `static` output is a
+                # complete package root that Lake can use directly:
+                # source, lakefile, oleans (symlinked from $out), and
+                # native objects.
+                #
+                # We copy the source tree and symlink only .lake/build/lib/
+                # from $out (the oleans).  We cannot lndir the entire $out
+                # because both outputs are built in the same derivation and
+                # $out is not yet a valid store path during the build,
+                # causing broken symlink errors in the fixup phase.
+                cp -rT . "$static"
+                rm -rf "$static/.lake/packages"
+                rm -f "$static/.lake/package-overrides.json"
+              ''}
 
               runHook postInstall
             ''

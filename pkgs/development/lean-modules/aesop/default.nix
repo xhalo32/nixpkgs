@@ -17,6 +17,7 @@ buildLakePackage {
   };
 
   leanPackageName = "aesop";
+  nativeTargets = [ "Aesop" ];
   leanDeps = [ batteries ];
 
   meta = {

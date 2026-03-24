@@ -17,6 +17,7 @@ buildLakePackage {
   };
 
   leanPackageName = "importGraph";
+  nativeTargets = [ "ImportGraph" ];
   leanDeps = [ Cli ];
 
   meta = {
