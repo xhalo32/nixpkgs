@@ -1,6 +1,6 @@
 {
   lib,
-  stdenv,
+  llvmPackages_19,
   cmake,
   fetchFromGitHub,
   git,
@@ -13,11 +13,11 @@
   perl,
   testers,
 }:
-# Only bumping the version number fails with error 2: nix log /nix/store/wilsj71bpdbh3nq6505zcbpd2s3570nj-lean4-4.30.0.drv
+
 let
   cadical' = cadical.override { version = "2.1.3"; };
 in
-stdenv.mkDerivation (finalAttrs: {
+llvmPackages_19.stdenv.mkDerivation (finalAttrs: {
   pname = "lean4";
   version = "4.30.0";
 
@@ -39,6 +39,11 @@ stdenv.mkDerivation (finalAttrs: {
 
   VERBOSE = "1";
 
+  # Fix for "gcc: error: unrecognized command-line option '--print-target-triple'"
+  # substituteInPlace stage0/src/CMakeLists.txt \
+  # --replace-fail 'set(LEAN_PLATFORM_TARGET ""' 'set(LEAN_PLATFORM_TARGET "x86_64-unknown-linux-gnu"'
+
+  # TODO can we install leantar?
   postPatch =
     let
       pattern = "\${LEAN_BINARY_DIR}/../mimalloc/src/mimalloc";
@@ -46,6 +51,10 @@ stdenv.mkDerivation (finalAttrs: {
     ''
       substituteInPlace src/CMakeLists.txt \
         --replace-fail 'set(GIT_SHA1 "")' 'set(GIT_SHA1 "${finalAttrs.src.tag}")'
+      substituteInPlace stage0/src/CMakeLists.txt \
+        --replace-fail 'option(INSTALL_LEANTAR "Install a copy of leantar" ON)' 'option(INSTALL_LEANTAR "Install a copy of leantar" OFF)'
+      substituteInPlace src/CMakeLists.txt \
+        --replace-fail 'option(INSTALL_LEANTAR "Install a copy of leantar" ON)' 'option(INSTALL_LEANTAR "Install a copy of leantar" OFF)'
 
       # Remove tests that fails in sandbox.
       # It expects `sourceRoot` to be a git repository.
@@ -64,9 +73,26 @@ stdenv.mkDerivation (finalAttrs: {
     patchShebangs stage0/src/bin/ src/bin/
   '';
 
+  # dontUseCmakeConfigure = true;
+
+  # configurePhase = ''
+  #   runHook preConfigure
+
+  #   cmake --preset release -DUSE_GITHASH=OFF -DINSTALL_LICENSE=OFF -DINSTALL_CADICAL=OFF -DINSTALL_LEANTAR=OFF -DUSE_MIMALLOC=ON
+
+  #   runHook postConfigure
+  # '';
+
+  # Build directory for `--preset=release`
+  preBuild = ''
+    cd release
+  '';
+
   nativeBuildInputs = [
     cmake
     pkg-config
+    llvmPackages_19.bintools
+    llvmPackages_19.llvm
     makeWrapper
   ];
 
@@ -89,9 +115,11 @@ stdenv.mkDerivation (finalAttrs: {
   patches = [ ./mimalloc.patch ];
 
   cmakeFlags = [
+    "--preset=release"
     "-DUSE_GITHASH=OFF"
     "-DINSTALL_LICENSE=OFF"
     "-DINSTALL_CADICAL=OFF"
+    # "-DINSTALL_LEANTAR=OFF"
     "-DUSE_MIMALLOC=${if enableMimalloc then "ON" else "OFF"}"
   ];
 

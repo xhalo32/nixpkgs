@@ -13,9 +13,22 @@
   perl,
   testers,
 }:
-# Only bumping the version number fails with error 2: nix log /nix/store/wilsj71bpdbh3nq6505zcbpd2s3570nj-lean4-4.30.0.drv
+
 let
   cadical' = cadical.override { version = "2.1.3"; };
+  libuv' = libuv.overrideAttrs (attrs: {
+    configureFlags = [ "--enable-static" ];
+    hardeningDisable = [ "stackprotector" ];
+    # Sync version with CMakeLists.txt
+    version = "1.48.0";
+    src = fetchFromGitHub {
+      owner = "libuv";
+      repo = "libuv";
+      rev = "v1.48.0";
+      sha256 = "100nj16fg8922qg4m2hdjh62zv4p32wyrllsvqr659hdhjc03bsk";
+    };
+    doCheck = false;
+  });
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "lean4";
@@ -47,6 +60,11 @@ stdenv.mkDerivation (finalAttrs: {
       substituteInPlace src/CMakeLists.txt \
         --replace-fail 'set(GIT_SHA1 "")' 'set(GIT_SHA1 "${finalAttrs.src.tag}")'
 
+      substituteInPlace stage0/src/CMakeLists.txt \
+        --replace-fail 'option(INSTALL_LEANTAR "Install a copy of leantar" ON)' 'option(INSTALL_LEANTAR "Install a copy of leantar" OFF)'
+      substituteInPlace src/CMakeLists.txt \
+        --replace-fail 'option(INSTALL_LEANTAR "Install a copy of leantar" ON)' 'option(INSTALL_LEANTAR "Install a copy of leantar" OFF)'
+
       # Remove tests that fails in sandbox.
       # It expects `sourceRoot` to be a git repository.
       rm -rf src/lake/examples/git/
@@ -64,6 +82,11 @@ stdenv.mkDerivation (finalAttrs: {
     patchShebangs stage0/src/bin/ src/bin/
   '';
 
+  # Build directory for `--preset=release`
+  preBuild = ''
+    cd release
+  '';
+
   nativeBuildInputs = [
     cmake
     pkg-config
@@ -72,9 +95,11 @@ stdenv.mkDerivation (finalAttrs: {
 
   buildInputs = [
     gmp
-    libuv
+    libuv'
     cadical'
   ];
+
+  LIBUV = libuv';
 
   postInstall = ''
     wrapProgram $out/bin/lean \
@@ -89,6 +114,7 @@ stdenv.mkDerivation (finalAttrs: {
   patches = [ ./mimalloc.patch ];
 
   cmakeFlags = [
+    "--preset=release"
     "-DUSE_GITHASH=OFF"
     "-DINSTALL_LICENSE=OFF"
     "-DINSTALL_CADICAL=OFF"

@@ -12,8 +12,9 @@
   enableMimalloc ? true,
   perl,
   testers,
+  writeShellScriptBin,
 }:
-# Only bumping the version number fails with error 2: nix log /nix/store/wilsj71bpdbh3nq6505zcbpd2s3570nj-lean4-4.30.0.drv
+# Surprisingly this builds! nix log /nix/store/1d3hwyjri1g5lmxi9n3pw6924kmh97ra-lean4-4.30.0
 let
   cadical' = cadical.override { version = "2.1.3"; };
 in
@@ -68,6 +69,7 @@ stdenv.mkDerivation (finalAttrs: {
     cmake
     pkg-config
     makeWrapper
+    (writeShellScriptBin "leantar" "echo leantar")
   ];
 
   buildInputs = [

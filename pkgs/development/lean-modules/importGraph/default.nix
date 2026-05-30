@@ -7,13 +7,13 @@
 
 buildLakePackage {
   pname = "lean4-importGraph";
-  version = "4.29.0";
+  version = "4.30.0";
 
   src = fetchFromGitHub {
     owner = "leanprover-community";
     repo = "import-graph";
-    tag = "v4.29.0";
-    hash = "sha256-tqdO2qyWiJzEbK0yuu4+tiOXTEg9XJfGnI7z6Jh/abg=";
+    tag = "v4.30.0";
+    hash = "sha256-V3bGQxTNs2G4MqaVxRb6WED1a7VaHfEo1HgBNqPipz8=";
   };
 
   leanPackageName = "importGraph";

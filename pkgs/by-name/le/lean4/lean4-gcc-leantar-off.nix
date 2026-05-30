@@ -13,7 +13,7 @@
   perl,
   testers,
 }:
-# Only bumping the version number fails with error 2: nix log /nix/store/wilsj71bpdbh3nq6505zcbpd2s3570nj-lean4-4.30.0.drv
+# This builds, but uses the --preset=default which is unnecessary
 let
   cadical' = cadical.override { version = "2.1.3"; };
 in
@@ -47,6 +47,11 @@ stdenv.mkDerivation (finalAttrs: {
       substituteInPlace src/CMakeLists.txt \
         --replace-fail 'set(GIT_SHA1 "")' 'set(GIT_SHA1 "${finalAttrs.src.tag}")'
 
+      substituteInPlace stage0/src/CMakeLists.txt \
+        --replace-fail 'option(INSTALL_LEANTAR "Install a copy of leantar" ON)' 'option(INSTALL_LEANTAR "Install a copy of leantar" OFF)'
+      substituteInPlace src/CMakeLists.txt \
+        --replace-fail 'option(INSTALL_LEANTAR "Install a copy of leantar" ON)' 'option(INSTALL_LEANTAR "Install a copy of leantar" OFF)'
+
       # Remove tests that fails in sandbox.
       # It expects `sourceRoot` to be a git repository.
       rm -rf src/lake/examples/git/
@@ -62,6 +67,11 @@ stdenv.mkDerivation (finalAttrs: {
 
   preConfigure = ''
     patchShebangs stage0/src/bin/ src/bin/
+  '';
+
+  # Build directory for `--preset=release`
+  preBuild = ''
+    cd release
   '';
 
   nativeBuildInputs = [
@@ -89,6 +99,7 @@ stdenv.mkDerivation (finalAttrs: {
   patches = [ ./mimalloc.patch ];
 
   cmakeFlags = [
+    "--preset=release"
     "-DUSE_GITHASH=OFF"
     "-DINSTALL_LICENSE=OFF"
     "-DINSTALL_CADICAL=OFF"

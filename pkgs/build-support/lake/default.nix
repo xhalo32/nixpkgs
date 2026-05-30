@@ -14,6 +14,7 @@
   cacert,
   jq,
   writeText,
+  llvmPackages_19,
   stdenvNoCC,
 }:
 
@@ -117,6 +118,7 @@ lib.extendMkDerivation {
         lean4
         gitMinimal
         jq
+        llvmPackages_19.lld
       ];
 
       propagatedBuildInputs = lib.optionals isLibrary leanDeps;
@@ -131,7 +133,7 @@ lib.extendMkDerivation {
           # Disable cloud caching and Reservoir lookups.
           export LAKE_NO_CACHE=1
           export RESERVOIR_API_URL=""
-          export LEAN_CC="${stdenv.cc}/bin/cc"
+          export LEAN_CC="${llvmPackages_19.stdenv.cc}/bin/cc"
 
           if [ -n "''${LEAN_PATH:-}" ]; then
             echo "buildLakePackage: LEAN_PATH=$LEAN_PATH"

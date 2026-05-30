@@ -13,7 +13,7 @@
   perl,
   testers,
 }:
-# Only bumping the version number fails with error 2: nix log /nix/store/wilsj71bpdbh3nq6505zcbpd2s3570nj-lean4-4.30.0.drv
+# This builds: nix log /nix/store/8zaplx4gk62pi6bmzb7nj81kl473l4nk-lean4-4.30.0
 let
   cadical' = cadical.override { version = "2.1.3"; };
 in
@@ -46,6 +46,11 @@ stdenv.mkDerivation (finalAttrs: {
     ''
       substituteInPlace src/CMakeLists.txt \
         --replace-fail 'set(GIT_SHA1 "")' 'set(GIT_SHA1 "${finalAttrs.src.tag}")'
+
+      substituteInPlace stage0/src/CMakeLists.txt \
+        --replace-fail 'option(INSTALL_LEANTAR "Install a copy of leantar" ON)' 'option(INSTALL_LEANTAR "Install a copy of leantar" OFF)'
+      substituteInPlace src/CMakeLists.txt \
+        --replace-fail 'option(INSTALL_LEANTAR "Install a copy of leantar" ON)' 'option(INSTALL_LEANTAR "Install a copy of leantar" OFF)'
 
       # Remove tests that fails in sandbox.
       # It expects `sourceRoot` to be a git repository.

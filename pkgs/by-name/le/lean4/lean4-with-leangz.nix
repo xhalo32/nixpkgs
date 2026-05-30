@@ -12,10 +12,24 @@
   enableMimalloc ? true,
   perl,
   testers,
+  writeShellScriptBin,
+  rustPlatform,
 }:
-# Only bumping the version number fails with error 2: nix log /nix/store/wilsj71bpdbh3nq6505zcbpd2s3570nj-lean4-4.30.0.drv
+# This builds: nix log /nix/store/9ny9zrvp7yz6cjxf7kxxifa4kr5jwkma-lean4-4.30.0
 let
   cadical' = cadical.override { version = "2.1.3"; };
+
+  leangz = rustPlatform.buildRustPackage (finalAttrs: {
+    pname = "leangz";
+    version = "0.1.19";
+    src = fetchFromGitHub {
+      owner = "digama0";
+      repo = "leangz";
+      tag = "v0.1.19"; # LEANTAR_VERSION in /CMakeLists.txt
+      hash = "sha256-kDvaydStWiJYCmKjoU39tuOQHNw5Zo577GeAvlENO2o=";
+    };
+    cargoDeps = rustPlatform.importCargoLock { lockFile = "${finalAttrs.src}/Cargo.lock"; };
+  });
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "lean4";
@@ -68,6 +82,7 @@ stdenv.mkDerivation (finalAttrs: {
     cmake
     pkg-config
     makeWrapper
+    leangz # Provides leantar
   ];
 
   buildInputs = [

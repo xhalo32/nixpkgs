@@ -13,7 +13,7 @@
   perl,
   testers,
 }:
-# Only bumping the version number fails with error 2: nix log /nix/store/wilsj71bpdbh3nq6505zcbpd2s3570nj-lean4-4.30.0.drv
+# Fails with error 2 (nix log /nix/store/nczib480z8nqlbb0k1jbbj66c51c0k8w-lean4-4.30.0.drv)
 let
   cadical' = cadical.override { version = "2.1.3"; };
 in
@@ -64,6 +64,11 @@ stdenv.mkDerivation (finalAttrs: {
     patchShebangs stage0/src/bin/ src/bin/
   '';
 
+  # Build directory for `--preset=release`
+  preBuild = ''
+    cd release
+  '';
+
   nativeBuildInputs = [
     cmake
     pkg-config
@@ -89,9 +94,11 @@ stdenv.mkDerivation (finalAttrs: {
   patches = [ ./mimalloc.patch ];
 
   cmakeFlags = [
+    "--preset=release"
     "-DUSE_GITHASH=OFF"
     "-DINSTALL_LICENSE=OFF"
     "-DINSTALL_CADICAL=OFF"
+    "-DINSTALL_LEANTAR=OFF"
     "-DUSE_MIMALLOC=${if enableMimalloc then "ON" else "OFF"}"
   ];
 
